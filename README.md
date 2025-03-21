@@ -1,27 +1,68 @@
-# MartfuryShop
+# Client Shop - Laptopshop
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 12.1.1.
+Frontend ứng dụng cho người dùng của hệ thống Laptopshop.
 
-## Development server
+## Continuous Integration (CI)
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The app will automatically reload if you change any of the source files.
+Dự án này sử dụng GitHub Actions để tự động hóa quy trình kiểm tra và xây dựng.
 
-## Code scaffolding
+### Workflow CI
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+Workflow sẽ được kích hoạt khi:
+- Push code lên nhánh main hoặc master
+- Tạo Pull Request vào main hoặc master
+- Kích hoạt thủ công từ tab Actions
 
-## Build
+### Các bước trong CI pipeline:
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory.
+1. **Setup môi trường**
+   - Checkout code
+   - Cài đặt Node.js 14
+   - Cache npm dependencies
 
-## Running unit tests
+2. **Kiểm tra chất lượng**
+   - Cài đặt dependencies
+   - Chạy linting
+   - Chạy unit tests với Chrome Headless
 
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
+3. **Build**
+   - Build ứng dụng cho production
+   - Lưu trữ build artifacts
 
-## Running end-to-end tests
+### Artifacts
 
-Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
+Build artifacts sẽ được lưu trữ trong 5 ngày và có thể tải xuống từ tab Actions.
 
-## Further help
+## Phát triển
 
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.io/cli) page.
+### Yêu cầu
+- Node.js 14.x
+- npm 6.x trở lên
+
+### Cài đặt
+```bash
+npm install
+```
+
+### Các lệnh có sẵn
+```bash
+# Chạy môi trường development
+npm start
+
+# Build cho production
+npm run build
+
+# Chạy unit tests
+npm test
+
+# Chạy linting
+npm run lint
+```
+
+## Công nghệ sử dụng
+- Angular 12.1.5
+- Bootstrap 5.1.3
+- NgBootstrap 10.0.0
+- JWT Authentication
+- NgxPayPal 8.0.0
+- NgxSlickCarousel 0.6.0
