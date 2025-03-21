@@ -1,0 +1,136 @@
+name: Client Shop CI/CD
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'client-shop/**'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'client-shop/**'
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '14'
+        cache: 'npm'
+        cache-dependency-path: 'client-shop/package-lock.json'
+
+    - name: Install dependencies
+      working-directory: ./client-shop
+      run: npm install
+
+    - name: Run tests
+      working-directory: ./client-shop
+      run: npm test -- --watch=false --browsers=ChromeHeadless
+
+    - name: Build
+      working-directory: ./client-shop
+      run: npm run build --prod
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: client-shop-build
+        path: client-shop/dist/
+        retention-days: 1
+
+  docker-build-push:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_HUB_USERNAME }}
+        password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Build and push Client Shop
+      uses: docker/build-push-action@v3
+      with:
+        context: ./client-shop
+        push: true
+        tags: ${{ secrets.DOCKER_HUB_USERNAME }}/laptopshop-client-shop:latest,${{ secrets.DOCKER_HUB_USERNAME }}/laptopshop-client-shop:${{ github.sha }}
+        cache-from: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/laptopshop-client-shop:buildcache
+        cache-to: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/laptopshop-client-shop:buildcache,mode=max
+
+  deploy:
+    needs: docker-build-push
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Create deployment directory
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          mkdir -p /home/${{ secrets.SSH_USERNAME }}/laptopshop/client-shop
+
+    - name: Copy Dockerfile and nginx.conf
+      uses: appleboy/scp-action@master
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        source: "client-shop/Dockerfile,client-shop/nginx.conf"
+        target: "/home/${{ secrets.SSH_USERNAME }}/laptopshop"
+        strip_components: 0
+
+    - name: Create docker-compose override
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          cat > /home/${{ secrets.SSH_USERNAME }}/laptopshop/docker-compose.client-shop.yml << 'EOL'
+          version: '3.8'
+
+          services:
+            client-shop:
+              image: ${{ secrets.DOCKER_HUB_USERNAME }}/laptopshop-client-shop:${{ github.sha }}
+              container_name: laptopshop-client-shop
+              restart: always
+              ports:
+                - "80:80"
+              networks:
+                - laptopshop-network
+              depends_on:
+                - backend
+
+          networks:
+            laptopshop-network:
+              external: true
+          EOL
+
+    - name: Deploy client-shop
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          cd /home/${{ secrets.SSH_USERNAME }}/laptopshop
+          docker-compose -f docker-compose.client-shop.yml pull client-shop
+          docker-compose -f docker-compose.client-shop.yml up -d client-shop

@@ -1,0 +1,47 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'client-shop/**'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'client-shop/**'
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '14'
+        cache: 'npm'
+        cache-dependency-path: 'client-shop/package-lock.json'
+
+    - name: Install dependencies
+      working-directory: ./client-shop
+      run: npm install
+
+    - name: Run tests
+      working-directory: ./client-shop
+      run: npm test -- --watch=false --browsers=ChromeHeadless
+
+    - name: Build
+      working-directory: ./client-shop
+      run: npm run build -- --prod --base-href="/Laptopshop-final/"
+
+    - name: Deploy to GitHub Pages
+      if: github.event_name != 'pull_request'
+      uses: JamesIves/github-pages-deploy-action@v4
+      with:
+        folder: client-shop/dist/cellphones-user
+        branch: gh-pages
+        clean: true

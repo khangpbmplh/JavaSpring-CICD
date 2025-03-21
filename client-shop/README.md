@@ -1,27 +1,96 @@
-# MartfuryShop
+# Client Shop - Laptopshop
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 12.1.1.
+Frontend ứng dụng cho người dùng của hệ thống Laptopshop.
 
-## Development server
+## Công nghệ sử dụng
+- Angular 12.1.5
+- Bootstrap 5.1.3
+- NgBootstrap 10.0.0
+- JWT Authentication
+- NgxPayPal 8.0.0
+- NgxSlickCarousel 0.6.0
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The app will automatically reload if you change any of the source files.
+## CI/CD với GitHub Pages
 
-## Code scaffolding
+Dự án này được cấu hình để tự động triển khai lên GitHub Pages khi có thay đổi trên nhánh main hoặc master.
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+### Quy trình CI/CD
+1. **Build và Test**
+   - Cài đặt dependencies
+   - Chạy unit tests
+   - Build ứng dụng cho production
 
-## Build
+2. **Deploy**
+   - Tự động deploy lên GitHub Pages
+   - Truy cập ứng dụng tại: https://[username].github.io/Laptopshop-final/
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory.
+### Kích hoạt Workflow
+Workflow sẽ chạy trong các trường hợp:
+- Push code lên nhánh main hoặc master
+- Tạo Pull Request vào main hoặc master
+- Kích hoạt thủ công từ tab Actions
 
-## Running unit tests
+## Phát triển
 
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
+### Yêu cầu
+- Node.js 14.x
+- npm 6.x trở lên
 
-## Running end-to-end tests
+### Cài đặt
+```bash
+npm install
+```
 
-Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
+### Chạy môi trường phát triển
+```bash
+npm start
+```
 
-## Further help
+### Build cho môi trường production
+```bash
+npm run build --prod
+```
 
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.io/cli) page.
+### Chạy test
+```bash
+npm test
+```
+
+## Lưu ý
+- Đảm bảo repository đã bật tính năng GitHub Pages
+- Branch gh-pages sẽ được tạo tự động
+- Base href trong build command phải khớp với tên repository
+
+## CI/CD
+
+Dự án này được cấu hình với nhiều workflow CI/CD để tự động hóa quá trình phát triển và triển khai:
+
+### 1. Standard CI/CD (client-shop-cicd.yml)
+- Build và test ứng dụng
+- Đóng gói và đẩy Docker image lên Docker Hub
+- Triển khai lên server thông qua SSH
+
+### 2. Azure Static Web Apps (azure-static-web-apps.yml)
+- Triển khai ứng dụng lên Azure Static Web Apps
+- Tự động tạo môi trường preview cho Pull Requests
+
+### 3. Build & Publish (npm-publish.yml)
+- Build và test ứng dụng
+- Đóng gói và đẩy Docker image lên GitHub Container Registry
+
+### 4. SonarCloud Analysis (sonarcloud.yml)
+- Phân tích chất lượng mã nguồn
+- Tạo báo cáo độ phủ test
+- Phát hiện lỗi và vấn đề tiềm ẩn
+
+## Docker
+
+### Build Docker image
+```bash
+docker build -t laptopshop-client-shop .
+```
+
+### Chạy Docker container
+```bash
+docker run -p 80:80 laptopshop-client-shop
+```

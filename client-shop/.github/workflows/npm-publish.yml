@@ -1,0 +1,75 @@
+name: Client Shop - Build & Publish
+
+on:
+  release:
+    types: [created]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '14'
+          cache: 'npm'
+          cache-dependency-path: 'client-shop/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: ./client-shop
+        run: npm ci
+
+      - name: Run tests
+        working-directory: ./client-shop
+        run: npm test -- --watch=false --browsers=ChromeHeadless
+
+      - name: Build
+        working-directory: ./client-shop
+        run: npm run build --prod
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: client-shop-build
+          path: client-shop/dist/
+          retention-days: 30
+
+  publish-image:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ghcr.io/${{ github.repository }}/client-shop
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=ref,event=branch
+            type=sha,format=long
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v3
+        with:
+          context: ./client-shop
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
